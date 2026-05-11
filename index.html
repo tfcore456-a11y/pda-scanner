@@ -53,7 +53,7 @@
 <div class="section">
   <h2>ตั้งค่าเซิร์ฟเวอร์</h2>
   <label>Google Apps Script URL</label>
-  <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec" value="https://script.google.com/macros/s/AKfycbxcKlS_wFPazW8StQlic-Xp5-pzJib6Xm05qT0tlcKpHQ0L53K_yzapW0dGcDqnXU6t/exec">
+  <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec" value="https://script.google.com/macros/s/AKfycbxzkOd4CbmV3ZYeDa275l-eTOoQIOxztLeRtjptOEtj8FOgKtpJjwAwFHOKiF6LCv2f/exec">
   <div class="hint">วาง URL จาก Deploy แล้วกดบันทึก</div>
   <button class="btn btn-primary" onclick="testConn()">ทดสอบการเชื่อมต่อ</button>
   <button class="btn btn-gray" onclick="saveURL()">💾 บันทึก URL</button>
@@ -125,7 +125,7 @@ async function testConn() {
   if (!url) { showToast('กรุณาใส่ URL ก่อน', 'err'); return; }
   setConn(null, 'กำลังทดสอบ...');
   try {
-    const res = await fetch(url + '?action=status');
+    const res = await fetch(url + '?action=status&t=' + Date.now());
     const data = await res.json();
     if (data.success) {
       setConn(true, 'เชื่อมต่อแล้ว');
