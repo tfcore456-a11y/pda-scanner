@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PDA Scanner</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; background: #f4f4f8; color: #222; min-height: 100vh; }
+  .header { background: #1a1a2e; color: #fff; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #888; flex-shrink: 0; }
+  .dot.on { background: #4caf50; }
+  .dot.err { background: #f44336; }
+  .conn-label { font-size: 12px; color: #aaa; margin-left: auto; }
+  .section { background: #fff; border-radius: 12px; padding: 16px; margin: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .section h2 { font-size: 13px; color: #666; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .5px; }
+  label { font-size: 13px; color: #555; display: block; margin-bottom: 4px; }
+  input, select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; background: #fafafa; margin-bottom: 10px; }
+  input:focus, select:focus { outline: none; border-color: #5c6bc0; background: #fff; }
+  .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
+  .btn-primary { background: #3949ab; color: #fff; }
+  .btn-scan { background: #1b5e20; color: #fff; font-size: 18px; padding: 18px; }
+  .btn-gray { background: #eee; color: #444; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #323232; color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 99; white-space: nowrap; max-width:90vw; text-align:center; }
+  .toast.show { opacity: 1; }
+  .toast.ok { background: #2e7d32; }
+  .toast.err { background: #c62828; }
+  .history-item { padding: 10px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 8px; align-items: flex-start; }
+  .history-item:last-child { border-bottom: none; }
+  .hi-num { font-family: monospace; font-size: 13px; color: #222; flex: 1; word-break: break-all; }
+  .hi-shop { font-size: 11px; color: #5c6bc0; font-weight: 600; }
+  .hi-time { font-size: 11px; color: #aaa; white-space: nowrap; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+  .b-pending { background: #fff3e0; color: #e65100; }
+  .b-shipped { background: #e3f2fd; color: #1565c0; }
+  .b-delivered { background: #e8f5e9; color: #2e7d32; }
+  .b-return { background: #fce4ec; color: #ad1457; }
+  .cam-wrap { width: 100%; border-radius: 10px; overflow: hidden; background: #000; margin-bottom: 10px; display: none; }
+  video { width: 100%; display: block; }
+  .empty { text-align: center; color: #bbb; font-size: 13px; padding: 16px 0; }
+  .hint { font-size: 11px; color: #999; margin-top: -8px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="dot" id="dot"></div>
+  <h1>PDA Scanner</h1>
+  <span class="conn-label" id="conn-label">ยังไม่ได้เชื่อมต่อ</span>
+</div>
+
+<div class="section">
+  <h2>ตั้งค่าเซิร์ฟเวอร์</h2>
+  <label>Google Apps Script URL</label>
+  <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec" value="https://script.google.com/macros/s/AKfycbxPubyUG0ZaABMQtKYbvnSBGd73l7x5w3JETXPuKemxYp8eQNmjau8SG7Oht6vxJYHh/exec">
+  <div class="hint">วาง URL จาก Deploy แล้วกดบันทึก</div>
+  <button class="btn btn-primary" onclick="testConn()">ทดสอบการเชื่อมต่อ</button>
+  <button class="btn btn-gray" onclick="saveURL()">💾 บันทึก URL</button>
+</div>
+
+<div class="section">
+  <h2>สแกน Tracking</h2>
+  <label>ร้านค้า</label>
+  <select id="shop">
+    <option value="Zenji">Zenji</option>
+    <option value="The Labatorian">The Labatorian</option>
+    <option value="Irin Bun">Irin Bun</option>
+    <option value="Papifeed">Papifeed</option>
+    <option value="Fluffy Friends">Fluffy Friends</option>
+    <option value="Kanda Bag">Kanda Bag</option>
+    <option value="Hi Genius">Hi Genius</option>
+    <option value="Hewson">Hewson</option>
+    <option value="Herbe">Herbe</option>
+    <option value="Gosleek">Gosleek</option>
+    <option value="other">อื่นๆ (พิมพ์เอง)</option>
+  </select>
+  <input type="text" id="shop-custom" placeholder="พิมพ์ชื่อร้านค้า..." style="display:none">
+  <label>สถานะ</label>
+  <select id="status">
+    <option value="pending">รอดำเนินการ</option>
+    <option value="shipped">กำลังจัดส่ง</option>
+    <option value="delivered">จัดส่งแล้ว</option>
+    <option value="return">ตีคืน</option>
+  </select>
+  <label>เลข Tracking (สแกนหรือพิมพ์)</label>
+  <input type="text" id="tracking-input" placeholder="สแกนหรือพิมพ์..." autocomplete="off">
+  <div class="cam-wrap" id="cam-wrap">
+    <video id="cam-video" autoplay playsinline></video>
+  </div>
+  <button class="btn btn-scan" onclick="sendScan()">ส่งข้อมูล</button>
+  <button class="btn btn-gray" onclick="openCamera()" id="cam-btn">เปิดกล้องสแกน QR/Barcode</button>
+  <button class="btn btn-gray" id="cam-stop-btn" onclick="stopCamera()" style="display:none">ปิดกล้อง</button>
+</div>
+
+<div class="section">
+  <h2>ประวัติการสแกน (<span id="hist-count">0</span>)</h2>
+  <div id="history-list"><div class="empty">ยังไม่มีประวัติ</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+let history = [];
+let cameraStream = null;
+let scanInterval = null;
+const savedURL = localStorage.getItem('gasURL') || '';
+if (savedURL) document.getElementById('gas-url').value = savedURL;
+
+document.getElementById('shop').addEventListener('change', function() {
+  document.getElementById('shop-custom').style.display = this.value === 'other' ? 'block' : 'none';
+});
+
+function getURL() { return document.getElementById('gas-url').value.trim(); }
+
+function saveURL() {
+  const url = getURL();
+  if (!url) { showToast('กรุณาใส่ URL ก่อน', 'err'); return; }
+  localStorage.setItem('gasURL', url);
+  showToast('บันทึก URL แล้ว', 'ok');
+}
+
+async function testConn() {
+  const url = getURL();
+  if (!url) { showToast('กรุณาใส่ URL ก่อน', 'err'); return; }
+  setConn(null, 'กำลังทดสอบ...');
+  try {
+    const res = await fetch(url + '?action=status&t=' + Date.now());
+    const data = await res.json();
+    if (data.success) {
+      setConn(true, 'เชื่อมต่อแล้ว');
+      showToast('เชื่อมต่อสำเร็จ! มีข้อมูล ' + data.total + ' รายการ', 'ok');
+    } else {
+      setConn(false, 'เชื่อมต่อไม่ได้');
+      showToast('URL ไม่ถูกต้อง', 'err');
+    }
+  } catch(e) {
+    setConn(false, 'เชื่อมต่อไม่ได้');
+    showToast('เชื่อมต่อไม่ได้', 'err');
+  }
+}
+
+function setConn(on, text) {
+  document.getElementById('dot').className = 'dot' + (on === true ? ' on' : on === false ? ' err' : '');
+  document.getElementById('conn-label').textContent = text || '';
+}
+
+async function sendScan() {
+  const url = getURL();
+  if (!url) { showToast('กรุณาตั้งค่า URL ก่อน', 'err'); return; }
+  const shopSel = document.getElementById('shop').value;
+  const shop = shopSel === 'other' ? document.getElementById('shop-custom').value.trim() : shopSel;
+  const tracking = document.getElementById('tracking-input').value.trim();
+  const status = document.getElementById('status').value;
+  if (!tracking) { showToast('กรุณากรอกเลข Tracking', 'err'); return; }
+  if (!shop) { showToast('กรุณาระบุชื่อร้าน', 'err'); return; }
+
+  setConn(null, 'กำลังส่ง...');
+  try {
+    const params = new URLSearchParams({ action:'scan', tracking, shop, status, note:'' });
+    const res = await fetch(url + '?' + params.toString());
+    const data = await res.json();
+    if (data.success) {
+      const now = new Date();
+      history.unshift({ tracking, shop, status, time: now.toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'}) });
+      renderHistory();
+      showToast('บันทึกแล้ว: ' + tracking, 'ok');
+      document.getElementById('tracking-input').value = '';
+      setConn(true, 'เชื่อมต่อแล้ว');
+    } else {
+      setConn(false, 'เกิดข้อผิดพลาด');
+      showToast('ส่งไม่สำเร็จ: ' + (data.error||''), 'err');
+    }
+  } catch(e) {
+    setConn(false, 'ออฟไลน์');
+    showToast('ไม่มีอินเทอร์เน็ต', 'err');
+  }
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  document.getElementById('hist-count').textContent = history.length;
+  if (!history.length) { el.innerHTML = '<div class="empty">ยังไม่มีประวัติ</div>'; return; }
+  const badges = { pending:'b-pending', shipped:'b-shipped', delivered:'b-delivered', return:'b-return' };
+  const labels = { pending:'รอดำเนิน', shipped:'จัดส่ง', delivered:'ถึงแล้ว', return:'ตีคืน' };
+  el.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div style="flex:1">
+        <div class="hi-num">${h.tracking}</div>
+        <div class="hi-shop">${h.shop}</div>
+      </div>
+      <span class="badge ${badges[h.status]}">${labels[h.status]}</span>
+      <div class="hi-time">${h.time}</div>
+    </div>`).join('');
+}
+
+async function openCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('cam-video');
+    video.srcObject = cameraStream;
+    document.getElementById('cam-wrap').style.display = 'block';
+    document.getElementById('cam-btn').style.display = 'none';
+    document.getElementById('cam-stop-btn').style.display = 'block';
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    scanInterval = setInterval(() => {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height);
+        if (code) {
+          document.getElementById('tracking-input').value = code.data;
+          stopCamera();
+          showToast('สแกนได้: ' + code.data, 'ok');
+        }
+      }
+    }, 300);
+  } catch(e) { showToast('ไม่สามารถเปิดกล้องได้', 'err'); }
+}
+
+function stopCamera() {
+  if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+  if (scanInterval) clearInterval(scanInterval);
+  document.getElementById('cam-wrap').style.display = 'none';
+  document.getElementById('cam-btn').style.display = 'block';
+  document.getElementById('cam-stop-btn').style.display = 'none';
+}
+
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => el.className = 'toast', 2500);
+}
+
+document.getElementById('tracking-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendScan();
+});
+
+if (savedURL) setConn(null, 'มี URL แล้ว');
+</script>
+</body>
+</html>
