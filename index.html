@@ -53,7 +53,7 @@
 <div class="section">
   <h2>ตั้งค่าเซิร์ฟเวอร์</h2>
   <label>Google Apps Script URL</label>
-  <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec" value="https://script.google.com/macros/s/AKfycbzXdpa5CtgErRQyEcdRMsUrOJcRg7sYApJPyFwXfEQ51U7URaLstgXgFpnFzX-Uyiku/exec">
+  <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec" value="https://script.google.com/macros/s/AKfycbyNobLNZxRJWSypCUDMhqqqZm0Df89lGrl3I-6_LsWZyqTk5wYrTxjGtdLm0K_cNCa-/exec">
   <div class="hint">วาง URL จาก Deploy แล้วกดบันทึก</div>
   <button class="btn btn-primary" onclick="testConn()">ทดสอบการเชื่อมต่อ</button>
   <button class="btn btn-gray" onclick="saveURL()">💾 บันทึก URL</button>
@@ -239,7 +239,7 @@ document.getElementById('tracking-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendScan();
 });
 
-const AUTO_URL = 'https://script.google.com/macros/s/AKfycbzXdpa5CtgErRQyEcdRMsUrOJcRg7sYApJPyFwXfEQ51U7URaLstgXgFpnFzX-Uyiku/exec';
+const AUTO_URL = 'https://script.google.com/macros/s/AKfycbyNobLNZxRJWSypCUDMhqqqZm0Df89lGrl3I-6_LsWZyqTk5wYrTxjGtdLm0K_cNCa-/exec';
 localStorage.setItem('gasURL', AUTO_URL);
 document.getElementById('gas-url').value = AUTO_URL;
 gasURL = AUTO_URL;
